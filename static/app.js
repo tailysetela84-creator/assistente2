@@ -62,10 +62,26 @@ async function sendMessage() {
     addMessage(text, true);
     messageInput.value = '';
     
-    // Simulate AI response
-    setTimeout(() => {
-        addMessage('Recebi sua mensagem! Como posso ajudar?');
-    }, 1000);
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        });
+        
+        const data = await response.json();
+        
+        if (data.response) {
+            addMessage(data.response, false);
+        } else if (data.error) {
+            addMessage('Erro ao processar mensagem: ' + data.error, false);
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        addMessage('Erro de conexão. Tente novamente.', false);
+    }
 }
 
 // Call Functions
@@ -90,14 +106,24 @@ function endCall() {
         clearInterval(callTimerInterval);
     }
     
+    if (transcriptionInterval) {
+        clearInterval(transcriptionInterval);
+    }
+    
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
+    }
+    
+    // Stop all audio tracks
+    if (mediaRecorder && mediaRecorder.stream) {
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
     
     callView.style.display = 'none';
     chatView.style.display = 'flex';
     
     callTimer.textContent = '00:00';
+    addTranscriptionItem('Chamada encerrada.', 'Sistema');
 }
 
 function startCallTimer() {
@@ -110,35 +136,43 @@ function startCallTimer() {
 }
 
 // Audio Recording and Transcription
+let transcriptionInterval = null;
+
 async function startAudioRecording() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         audioChunks = [];
         
         mediaRecorder.ondataavailable = (event) => {
-            audioChunks.push(event.data);
+            if (event.data.size > 0) {
+                audioChunks.push(event.data);
+            }
         };
         
         mediaRecorder.onstop = async () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            await transcribeAudio(audioBlob);
+            if (audioChunks.length > 0) {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                await transcribeAudio(audioBlob);
+            }
         };
         
-        mediaRecorder.start();
+        mediaRecorder.start(1000); // Collect data every second
         
         // For real-time transcription, send chunks periodically
-        setInterval(async () => {
-            if (mediaRecorder.state === 'recording' && audioChunks.length > 0) {
+        transcriptionInterval = setInterval(async () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording' && audioChunks.length > 0) {
                 const tempBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 await transcribeAudio(tempBlob);
                 audioChunks = []; // Clear chunks after sending
             }
         }, 5000); // Send every 5 seconds
         
+        addTranscriptionItem('Gravação iniciada. Fale agora...', 'Sistema');
+        
     } catch (error) {
         console.error('Error accessing microphone:', error);
-        addTranscriptionItem('Erro ao acessar microfone', 'Sistema');
+        addTranscriptionItem('Erro ao acessar microfone: ' + error.message, 'Sistema');
     }
 }
 

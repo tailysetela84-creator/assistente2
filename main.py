@@ -58,6 +58,42 @@ def transcribe():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.get_json()
+    message = data.get('message', '').strip()
+    
+    if not message:
+        return jsonify({'error': 'No message provided'}), 400
+    
+    try:
+        # Simple AI response logic (can be enhanced with actual AI model)
+        response = generate_ai_response(message)
+        
+        return jsonify({
+            'response': response
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def generate_ai_response(message):
+    """Generate AI response based on message content"""
+    message_lower = message.lower()
+    
+    # Simple keyword-based responses (can be replaced with actual AI)
+    if 'agricultura' in message_lower or 'fazenda' in message_lower or 'planta' in message_lower:
+        return "A agricultura é a prática de cultivar plantas e criar animais para alimentação, fibra e outros produtos. Inclui técnicas como rotação de culturas, irrigação e uso de fertilizantes para aumentar a produtividade. A agricultura sustentável busca equilibrar produção com preservação ambiental."
+    elif 'transcrição' in message_lower or 'transcrever' in message_lower:
+        return "Posso ajudar você a transcrever áudios em tempo real! Basta clicar no ícone de telefone para iniciar uma chamada e tudo que for falado será transcrito automaticamente usando o modelo Whisper da OpenAI."
+    elif 'olá' in message_lower or 'oi' in message_lower:
+        return "Olá! Como posso ajudar você hoje? Posso transcrever áudios, responder perguntas ou conversar sobre diversos temas."
+    elif 'ajuda' in message_lower or 'help' in message_lower:
+        return "Claro! Estou aqui para ajudar. Posso transcrever áudios em tempo real durante chamadas, responder perguntas e conversar. Use o chat para digitar mensagens ou o botão de telefone para chamadas com transcrição."
+    elif 'obrigado' in message_lower or 'thanks' in message_lower:
+        return "De nada! Se precisar de mais alguma coisa, é só chamar."
+    else:
+        return f"Entendi sua mensagem sobre \"{message}\". Como sou um assistente focado em transcrição de áudio, posso ajudar melhor com chamadas e transcrições. Quer que eu explique mais sobre como funciona a transcrição em tempo real?"
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
