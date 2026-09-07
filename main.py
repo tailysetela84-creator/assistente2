@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, render_template
 import whisper
 from werkzeug.utils import secure_filename
 import tempfile
+from openai import OpenAI
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -15,6 +16,13 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Load Whisper model (using base model by default)
 model_name = os.environ.get('WHISPER_MODEL', 'base')
 model = whisper.load_model(model_name)
+
+# Initialize OpenAI client
+openai_api_key = os.environ.get('OPENAI_API_KEY')
+if openai_api_key:
+    openai_client = OpenAI(api_key=openai_api_key)
+else:
+    openai_client = None
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -67,8 +75,11 @@ def chat():
         return jsonify({'error': 'No message provided'}), 400
     
     try:
-        # Simple AI response logic (can be enhanced with actual AI model)
-        response = generate_ai_response(message)
+        # Use OpenAI API if available, otherwise fallback to simple responses
+        if openai_client:
+            response = generate_llm_response(message)
+        else:
+            response = generate_ai_response(message)
         
         return jsonify({
             'response': response
@@ -76,8 +87,32 @@ def chat():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def generate_llm_response(message):
+    """Generate AI response using OpenAI LLM"""
+    try:
+        completion = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Você é um assistente de IA útil e amigável que responde em português. Você tem conhecimento sobre transcrição de áudio e pode ajudar com diversos assuntos."
+                },
+                {
+                    "role": "user",
+                    "content": message
+                }
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        
+        return completion.choices[0].message.content
+    except Exception as e:
+        print(f"OpenAI API error: {e}")
+        return generate_ai_response(message)
+
 def generate_ai_response(message):
-    """Generate AI response based on message content"""
+    """Generate AI response based on message content (fallback)"""
     message_lower = message.lower()
     
     # Simple keyword-based responses (can be replaced with actual AI)
