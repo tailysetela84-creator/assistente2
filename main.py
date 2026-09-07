@@ -1,10 +1,10 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import whisper
 from werkzeug.utils import secure_filename
 import tempfile
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 
 # Configuration
 UPLOAD_FOLDER = tempfile.gettempdir()
@@ -21,14 +21,7 @@ def allowed_file(filename):
 
 @app.route('/')
 def home():
-    return jsonify({
-        'message': 'Whisper API is running',
-        'model': model_name,
-        'endpoints': {
-            'transcribe': '/transcribe (POST)',
-            'health': '/health (GET)'
-        }
-    })
+    return render_template('index.html')
 
 @app.route('/health')
 def health():
