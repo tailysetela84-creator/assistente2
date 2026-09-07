@@ -499,6 +499,76 @@ body {
     flex: 1;
     padding: 24px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.voice-activity-container {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.voice-activity-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.voice-activity-bar {
+    background: #2a2a2a;
+    border-radius: 8px;
+    height: 24px;
+    overflow: hidden;
+    position: relative;
+}
+
+.voice-activity-level {
+    height: 100%;
+    background: linear-gradient(90deg, #4a90e2, #6ab7ff);
+    width: 0%;
+    transition: width 0.1s ease;
+    border-radius: 8px;
+}
+
+.voice-activity-value {
+    font-size: 12px;
+    color: #a0a0a0;
+    text-align: right;
+}
+
+.language-selector {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.language-selector label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.language-selector select {
+    background: #2a2a2a;
+    color: #ffffff;
+    border: 1px solid #3a3a3a;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+}
+
+.language-selector select:focus {
+    border-color: #4a90e2;
 }
 
 .transcription-area {

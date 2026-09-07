@@ -52,8 +52,14 @@ def transcribe():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Transcribe audio
-        result = model.transcribe(filepath)
+        # Get language parameter if provided
+        language = request.form.get('language', None)
+        
+        # Transcribe audio with language parameter
+        if language and language != 'auto':
+            result = model.transcribe(filepath, language=language)
+        else:
+            result = model.transcribe(filepath)
         
         # Clean up
         os.remove(filepath)
@@ -128,6 +134,53 @@ def generate_ai_response(message):
         return "De nada! Se precisar de mais alguma coisa, é só chamar."
     else:
         return f"Entendi sua mensagem sobre \"{message}\". Como sou um assistente focado em transcrição de áudio, posso ajudar melhor com chamadas e transcrições. Quer que eu explique mais sobre como funciona a transcrição em tempo real?"
+
+@app.route('/tts', methods=['POST'])
+def text_to_speech():
+    """Convert text to speech using OpenAI TTS"""
+    data = request.get_json()
+    text = data.get('text', '').strip()
+    language = data.get('language', 'pt')
+    
+    if not text:
+        return jsonify({'error': 'No text provided'}), 400
+    
+    if not openai_client:
+        return jsonify({'error': 'OpenAI API key not configured'}), 500
+    
+    try:
+        # Language code mapping for TTS
+        language_map = {
+            'pt': 'pt-BR',
+            'en': 'en-US',
+            'es': 'es-ES',
+            'fr': 'fr-FR',
+            'de': 'de-DE',
+            'it': 'it-IT'
+        }
+        
+        voice_language = language_map.get(language, 'pt-BR')
+        
+        response = openai_client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=text
+        )
+        
+        # Return audio file
+        from flask import send_file
+        import io
+        
+        audio_stream = io.BytesIO(response.content)
+        audio_stream.seek(0)
+        
+        return send_file(
+            audio_stream,
+            mimetype='audio/mpeg',
+            as_attachment=False
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

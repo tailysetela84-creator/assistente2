@@ -6,6 +6,9 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isMuted = false;
 let isVideoOn = false;
+let audioContext = null;
+let analyser = null;
+let voiceActivityInterval = null;
 
 // DOM Elements
 const chatView = document.getElementById('chatView');
@@ -24,6 +27,9 @@ const transcriptionContent = document.getElementById('transcriptionContent');
 const clearTranscription = document.getElementById('clearTranscription');
 const callTimer = document.getElementById('callTimer');
 const callStatus = document.getElementById('callStatus');
+const voiceActivityLevel = document.getElementById('voiceActivityLevel');
+const voiceActivityValue = document.getElementById('voiceActivityValue');
+const languageSelect = document.getElementById('languageSelect');
 
 // Chat Functions
 function addMessage(text, isUser = false) {
@@ -110,6 +116,10 @@ function endCall() {
         clearInterval(transcriptionInterval);
     }
     
+    if (voiceActivityInterval) {
+        clearInterval(voiceActivityInterval);
+    }
+    
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }
@@ -118,6 +128,15 @@ function endCall() {
     if (mediaRecorder && mediaRecorder.stream) {
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
+    
+    // Close audio context
+    if (audioContext) {
+        audioContext.close();
+    }
+    
+    // Reset voice activity UI
+    voiceActivityLevel.style.width = '0%';
+    voiceActivityValue.textContent = '0%';
     
     callView.style.display = 'none';
     chatView.style.display = 'flex';
@@ -143,6 +162,16 @@ async function startAudioRecording() {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         audioChunks = [];
+        
+        // Set up audio context for voice activity detection
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 256;
+        
+        // Start voice activity detection
+        startVoiceActivityDetection();
         
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -176,10 +205,49 @@ async function startAudioRecording() {
     }
 }
 
+function startVoiceActivityDetection() {
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    voiceActivityInterval = setInterval(() => {
+        if (!isCallActive) return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate average volume
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+        
+        // Convert to percentage (0-100)
+        const percentage = Math.min(100, Math.round((average / 128) * 100));
+        
+        // Update UI
+        voiceActivityLevel.style.width = percentage + '%';
+        voiceActivityValue.textContent = percentage + '%';
+        
+        // Change color based on activity level
+        if (percentage > 50) {
+            voiceActivityLevel.style.background = 'linear-gradient(90deg, #4ade80, #22c55e)';
+        } else if (percentage > 20) {
+            voiceActivityLevel.style.background = 'linear-gradient(90deg, #4a90e2, #6ab7ff)';
+        } else {
+            voiceActivityLevel.style.background = 'linear-gradient(90deg, #6b7280, #9ca3af)';
+        }
+    }, 100);
+}
+
 async function transcribeAudio(audioBlob) {
     try {
         const formData = new FormData();
         formData.append('audio', audioBlob, 'audio.webm');
+        
+        const language = languageSelect.value;
+        if (language && language !== 'auto') {
+            formData.append('language', language);
+        }
         
         const response = await fetch('/transcribe', {
             method: 'POST',
@@ -190,10 +258,62 @@ async function transcribeAudio(audioBlob) {
         
         if (data.text) {
             addTranscriptionItem(data.text, 'Você');
+            
+            // Get AI response and speak it
+            if (data.text.trim()) {
+                await getAIResponseAndSpeak(data.text);
+            }
         }
         
     } catch (error) {
         console.error('Error transcribing audio:', error);
+    }
+}
+
+async function getAIResponseAndSpeak(text) {
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ message: text })
+        });
+        
+        const data = await response.json();
+        
+        if (data.response) {
+            addTranscriptionItem(data.response, 'Assistente AI');
+            
+            // Speak the response
+            await speakResponse(data.response);
+        }
+    } catch (error) {
+        console.error('Error getting AI response:', error);
+    }
+}
+
+async function speakResponse(text) {
+    try {
+        const response = await fetch('/tts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                text: text,
+                language: languageSelect.value || 'pt'
+            })
+        });
+        
+        if (response.ok) {
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play();
+        }
+    } catch (error) {
+        console.error('Error playing TTS:', error);
     }
 }
 
