@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">(ai.assistant)</div>
+            </div>
+            
+            <button class="create-btn">
+                <i class="fas fa-plus"></i> Criar
+            </button>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-compass"></i> Descobrir
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-rss"></i> Feed
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-star"></i> Charms
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-flask"></i> Laboratórios
+                </a>
+            </nav>
+            
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Procurar">
+            </div>
+            
+            <div class="recent-chats">
+                <div class="section-header">Hoje</div>
+                <div class="chat-item active">
+                    <div class="avatar">
+                        <img src="/static/ai-avatar.png" alt="AI">
+                    </div>
+                    <span class="chat-name">Assistente</span>
+                </div>
+            </div>
+            
+            <button class="upgrade-btn">
+                Atualizar para (ai+)
+            </button>
+            
+            <div class="user-profile">
+                <div class="user-avatar">
+                    <img src="/static/user-avatar.png" alt="User">
+                </div>
+                <div class="user-info">
+                    <span class="username">User</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="chatView">
+            <header class="chat-header">
+                <div class="ai-info">
+                    <div class="ai-avatar">
+                        <img src="/static/ai-avatar.png" alt="AI">
+                    </div>
+                    <div class="ai-details">
+                        <h2>Assistente AI</h2>
+                        <span class="ai-handle">@whisper-model</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" id="startCallBtn">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button class="icon-btn">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message ai-message">
+                    <div class="message-avatar">
+                        <img src="/static/ai-avatar.png" alt="AI">
+                    </div>
+                    <div class="message-content">
+                        <div class="message-header">
+                            <span class="message-author">Assistente AI</span>
+                            <span class="ai-label">ai</span>
+                        </div>
+                        <div class="message-text">
+                            Olá! Sou seu assistente de IA com transcrição de voz. 
+                            Posso ajudar você a transcrever áudios em tempo real durante chamadas. 
+                            Clique no ícone de telefone para iniciar uma chamada com transcrição ao vivo.
+                        </div>
+                        <div class="message-actions">
+                            <button class="action-btn"><i class="fas fa-redo"></i></button>
+                            <button class="action-btn"><i class="fas fa-thumbs-down"></i></button>
+                            <button class="action-btn"><i class="fas fa-thumbs-up"></i></button>
+                            <button class="action-btn"><i class="fas fa-reply"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="Enviar mensagem para Assistente AI...">
+                    <button class="send-btn" id="sendBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <button class="icon-btn" id="callBtn">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <button class="icon-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="disclaimer">
+                Isto é uma IA e não uma pessoa real. Considere tudo o que é dito aqui como ficção
+            </div>
+        </main>
+
+        <!-- Call View (Hidden by default) -->
+        <main class="main-content call-view" id="callView" style="display: none;">
+            <div class="call-container">
+                <div class="call-header">
+                    <button class="back-btn" id="endCallBtn">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <div class="call-status">
+                        <span class="status-indicator"></span>
+                        <span id="callStatus">Em chamada</span>
+                    </div>
+                    <div class="call-timer" id="callTimer">00:00</div>
+                </div>
+                
+                <div class="call-content">
+                    <div class="transcription-area">
+                        <div class="transcription-header">
+                            <h3>Transcrição em Tempo Real</h3>
+                            <button class="clear-btn" id="clearTranscription">
+                                <i class="fas fa-trash"></i> Limpar
+                            </button>
+                        </div>
+                        <div class="transcription-content" id="transcriptionContent">
+                            <div class="transcription-placeholder">
+                                A transcrição aparecerá aqui durante a chamada...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="call-controls">
+                    <button class="control-btn" id="muteBtn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="control-btn" id="videoBtn">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="control-btn end-call" id="hangupBtn">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                    <button class="control-btn" id="speakerBtn">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
