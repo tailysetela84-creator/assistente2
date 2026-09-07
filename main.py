@@ -4,14 +4,20 @@ import whisper
 from werkzeug.utils import secure_filename
 import tempfile
 from openai import OpenAI
+import json
+from datetime import datetime
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Configuration
 UPLOAD_FOLDER = tempfile.gettempdir()
+TRAINING_DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'training_data')
 ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac', 'm4a', 'ogg', 'webm'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Create training data folder if it doesn't exist
+os.makedirs(TRAINING_DATA_FOLDER, exist_ok=True)
 
 # Load Whisper model (using base model by default)
 model_name = os.environ.get('WHISPER_MODEL', 'base')
@@ -55,10 +61,12 @@ def transcribe():
         # Get language parameter if provided
         language = request.form.get('language', None)
         
-        # Transcribe audio with language parameter
+        # Transcribe audio with automatic language detection by default
         if language and language != 'auto':
+            # Use specified language
             result = model.transcribe(filepath, language=language)
         else:
+            # Automatic language detection (Whisper default)
             result = model.transcribe(filepath)
         
         # Clean up
@@ -67,7 +75,8 @@ def transcribe():
         return jsonify({
             'text': result['text'],
             'language': result.get('language', 'unknown'),
-            'segments': result.get('segments', [])
+            'segments': result.get('segments', []),
+            'detected_language': result.get('language', 'unknown')
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -179,6 +188,79 @@ def text_to_speech():
             mimetype='audio/mpeg',
             as_attachment=False
         )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/train', methods=['POST'])
+def train_language():
+    """Submit training data for a new language"""
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+    
+    language_name = request.form.get('language_name', '').strip()
+    language_code = request.form.get('language_code', '').strip()
+    transcription = request.form.get('transcription', '').strip()
+    notes = request.form.get('notes', '').strip()
+    
+    if not language_name or not language_code or not transcription:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    file = request.files['audio']
+    if file.filename == '':
+        return jsonify({'error': 'No audio file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type'}), 400
+    
+    try:
+        # Create language-specific folder
+        language_folder = os.path.join(TRAINING_DATA_FOLDER, language_code)
+        os.makedirs(language_folder, exist_ok=True)
+        
+        # Save audio file
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        audio_filename = f"{timestamp}_{secure_filename(file.filename)}"
+        audio_path = os.path.join(language_folder, audio_filename)
+        file.save(audio_path)
+        
+        # Save training metadata
+        metadata = {
+            'language_name': language_name,
+            'language_code': language_code,
+            'transcription': transcription,
+            'notes': notes,
+            'audio_file': audio_filename,
+            'timestamp': timestamp
+        }
+        
+        metadata_path = os.path.join(language_folder, f"{timestamp}_metadata.json")
+        with open(metadata_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Training data for {language_name} ({language_code}) saved successfully'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/training-data', methods=['GET'])
+def get_training_data():
+    """Get list of training data"""
+    try:
+        languages = []
+        if os.path.exists(TRAINING_DATA_FOLDER):
+            for lang_code in os.listdir(TRAINING_DATA_FOLDER):
+                lang_folder = os.path.join(TRAINING_DATA_FOLDER, lang_code)
+                if os.path.isdir(lang_folder):
+                    # Count training samples
+                    samples = [f for f in os.listdir(lang_folder) if f.endswith('.json')]
+                    languages.append({
+                        'code': lang_code,
+                        'samples': len(samples)
+                    })
+        
+        return jsonify({'languages': languages})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

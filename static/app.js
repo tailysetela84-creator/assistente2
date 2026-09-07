@@ -30,6 +30,11 @@ const callStatus = document.getElementById('callStatus');
 const voiceActivityLevel = document.getElementById('voiceActivityLevel');
 const voiceActivityValue = document.getElementById('voiceActivityValue');
 const languageSelect = document.getElementById('languageSelect');
+const trainingBtn = document.getElementById('trainingBtn');
+const trainingModal = document.getElementById('trainingModal');
+const closeTrainingModal = document.getElementById('closeTrainingModal');
+const cancelTraining = document.getElementById('cancelTraining');
+const submitTraining = document.getElementById('submitTraining');
 
 // Chat Functions
 function addMessage(text, isUser = false) {
@@ -392,6 +397,74 @@ messageInput.addEventListener('keypress', (e) => {
 
 clearTranscription.addEventListener('click', clearTranscriptionArea);
 
+// Training Modal Functions
+trainingBtn.addEventListener('click', () => {
+    trainingModal.style.display = 'flex';
+});
+
+closeTrainingModal.addEventListener('click', () => {
+    trainingModal.style.display = 'none';
+});
+
+cancelTraining.addEventListener('click', () => {
+    trainingModal.style.display = 'none';
+});
+
+submitTraining.addEventListener('click', async () => {
+    const languageName = document.getElementById('languageName').value.trim();
+    const languageCode = document.getElementById('languageCode').value.trim();
+    const trainingAudio = document.getElementById('trainingAudio').files[0];
+    const trainingTranscription = document.getElementById('trainingTranscription').value.trim();
+    const trainingNotes = document.getElementById('trainingNotes').value.trim();
+
+    if (!languageName || !languageCode || !trainingAudio || !trainingTranscription) {
+        alert('Por favor, preencha todos os campos obrigatórios.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('language_name', languageName);
+    formData.append('language_code', languageCode);
+    formData.append('audio', trainingAudio);
+    formData.append('transcription', trainingTranscription);
+    if (trainingNotes) {
+        formData.append('notes', trainingNotes);
+    }
+
+    try {
+        const response = await fetch('/train', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert('Dados de treinamento enviados com sucesso! A IA será treinada com o novo idioma.');
+            trainingModal.style.display = 'none';
+            
+            // Clear form
+            document.getElementById('languageName').value = '';
+            document.getElementById('languageCode').value = '';
+            document.getElementById('trainingAudio').value = '';
+            document.getElementById('trainingTranscription').value = '';
+            document.getElementById('trainingNotes').value = '';
+        } else {
+            alert('Erro ao enviar dados: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error submitting training data:', error);
+        alert('Erro de conexão. Tente novamente.');
+    }
+});
+
+// Close modal when clicking outside
+trainingModal.addEventListener('click', (e) => {
+    if (e.target === trainingModal) {
+        trainingModal.style.display = 'none';
+    }
+});
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     // Create placeholder avatars if images don't exist
@@ -402,4 +475,28 @@ document.addEventListener('DOMContentLoaded', () => {
             this.parentElement.style.background = '#3a3a3a';
         };
     });
+    
+    // Load trained languages
+    loadTrainedLanguages();
 });
+
+async function loadTrainedLanguages() {
+    try {
+        const response = await fetch('/training-data');
+        const data = await response.json();
+        
+        if (data.languages && data.languages.length > 0) {
+            // Add trained languages to selector
+            const autoOption = languageSelect.querySelector('option[value="auto"]');
+            
+            data.languages.forEach(lang => {
+                const option = document.createElement('option');
+                option.value = lang.code;
+                option.textContent = `${lang.code} (${lang.samples} amostras)`;
+                languageSelect.insertBefore(option, autoOption);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading trained languages:', error);
+    }
+}

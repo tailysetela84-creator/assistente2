@@ -49,6 +49,13 @@
                 </div>
             </div>
             
+            <div class="training-section">
+                <div class="section-header">Treinar IA</div>
+                <button class="training-btn" id="trainingBtn">
+                    <i class="fas fa-graduation-cap"></i> Adicionar Idioma
+                </button>
+            </div>
+            
             <button class="upgrade-btn">
                 Atualizar para (ai+)
             </button>
@@ -198,6 +205,47 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Training Modal -->
+    <div class="modal" id="trainingModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Treinar IA com Novo Idioma</h2>
+                <button class="close-btn" id="closeTrainingModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="languageName">Nome do Idioma</label>
+                    <input type="text" id="languageName" placeholder="Ex: Kimbundu, Umbundu, etc.">
+                </div>
+                <div class="form-group">
+                    <label for="languageCode">Código do Idioma (ISO 639-1)</label>
+                    <input type="text" id="languageCode" placeholder="Ex: pt, en, es, fr, etc.">
+                </div>
+                <div class="form-group">
+                    <label for="trainingAudio">Arquivo de Áudio (Exemplo do idioma)</label>
+                    <input type="file" id="trainingAudio" accept="audio/*">
+                    <small>Envie um áudio de exemplo no idioma que deseja treinar</small>
+                </div>
+                <div class="form-group">
+                    <label for="trainingTranscription">Transcrição do Áudio</label>
+                    <textarea id="trainingTranscription" rows="4" placeholder="Digite exatamente o que foi falado no áudio..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="trainingNotes">Notas Adicionais (Opcional)</label>
+                    <textarea id="trainingNotes" rows="2" placeholder="Características específicas do idioma..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelTraining">Cancelar</button>
+                <button class="btn-primary" id="submitTraining">
+                    <i class="fas fa-upload"></i> Enviar para Treinamento
+                </button>
+            </div>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>
